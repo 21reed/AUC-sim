@@ -1,155 +1,61 @@
 # PHYSICS.md
 
-## Single-species 1D Lamm equation
+## Multi-bin Lamm equation (1D radial)
+For each size bin `k`, the concentration field `c_k(r,t)` obeys
 
-We model a dilute, single-species solution in a spinning cell using the radial Lamm equation in conservative form:
+```
+∂c_k/∂t = -(1/r) ∂[ r j_k ]/∂r
+j_k = -D_k(r) ∂c_k/∂r + v_k(r) c_k
+```
 
-∂c/∂t = - (1/r) ∂[ r j ]/∂r
+No-flux walls enforce `j_k(r_min)=j_k(r_max)=0`. The conserved quantity per bin is `M_k = ∫ r c_k dr`; total mass is `Σ_k M_k`.
 
-csharp
-Copy code
+### Conservative form
+Define `q_k = r c_k` and `F_k = r j_k`, giving `∂q_k/∂t = -∂F_k/∂r`. We discretize `q_k` on a uniform finite-volume grid with width `Δr`, centers `r_i`, faces `r_{i±1/2}`:
 
-with flux
+```
+q_i^{n+1} = q_i^n - (Δt/Δr)(F_{i+1/2} - F_{i-1/2})
+c_i = q_i / r_i
+```
 
-j(r,t) = -D ∂c/∂r + v(r) c
-v(r) = s ω² r
+Interior face flux uses centered diffusion and upwind advection with r- and size-dependent transport:
 
-markdown
-Copy code
-
-where:
-- `c(r,t)` is concentration
-- `D` is diffusion coefficient (m²/s)
-- `s` is sedimentation coefficient (s)
-- `ω` is angular speed (rad/s)
-
-### Boundary conditions (no-flux)
-No-flux walls impose:
-
-j(r_min,t) = 0
-j(r_max,t) = 0
-
-csharp
-Copy code
-
-Important: this is not equivalent to `∂c/∂r = 0` in general.
-
-### Conserved quantity
-Define the conserved radial mass:
-
-M = ∫_{r_min}^{r_max} r c(r,t) dr
-
-perl
-Copy code
-
-A conservative discretization should preserve `M` up to time-integration error.
-
-## Conservative variable and flux
-
-Define:
-
-q(r,t) = r c(r,t)
-F(r,t) = r j(r,t)
-
-css
-Copy code
-
-Then the PDE becomes a 1D conservation law:
-
-∂q/∂t = - ∂F/∂r
-
-go
-Copy code
-
-We evolve `q` conservatively and recover `c = q/r` at cell centers.
-
-## Discretisation
-
-Use a uniform finite-volume grid with cell width `Δr`, cell centers `r_i`, and faces `r_{i±1/2}`.
-
-Cell-averaged conserved quantity:
-q_i = r_i c_i
-
-sql
-Copy code
-
-Semi-discrete update:
-d/dt [ q_i Δr ] = - ( F_{i+1/2} - F_{i-1/2} )
-
-arduino
-Copy code
-
-Forward Euler time step:
-q_i^{n+1} = q_i^n - (Δt/Δr) ( F_{i+1/2} - F_{i-1/2} )
-c_i^{n+1} = q_i^{n+1} / r_i
-
-csharp
-Copy code
-
-### Interior face flux
-
-At an interior face, compute `j_{i+1/2}` as diffusion + advection:
-
-j_{i+1/2} = -D (c_{i+1} - c_i)/Δr + v_{i+1/2} c_upwind
-v_{i+1/2} = s ω² r_{i+1/2}
-c_upwind = (v_{i+1/2} ≥ 0) ? c_i : c_{i+1}
+```
+D_{i+1/2} = 0.5 (D_i + D_{i+1})
+v_{i+1/2} = 0.5 (v_i + v_{i+1})
+j_{i+1/2} = -D_{i+1/2}(c_{i+1}-c_i)/Δr + v_{i+1/2} c_upwind
 F_{i+1/2} = r_{i+1/2} j_{i+1/2}
+```
 
-nginx
-Copy code
+Boundary faces set `F=0` exactly (no ghost cells). No clamping is applied; positivity relies on a stable `Δt`.
 
-### Boundary face flux (no-flux)
+### Hydrodynamics per bin
+Particle radii `a_k` (geometric ≈ hydrodynamic). For shell thickness `t_shell`:
 
-Enforce no-flux by setting boundary face fluxes to zero:
+```
+a_core = max(a_k - t_shell, 0)
+V_core = 4/3 π a_core³
+V_tot  = 4/3 π a_k³
+ρ_eff  = (ρ_core V_core + ρ_shell_eff (V_tot - V_core)) / V_tot
+Δρ(r)  = ρ_eff - ρ(r)
+f(r)   = 6π η(r) a_k
+D_k(r) = k_B T / f(r)
+v_k(r) = Δρ(r) V_tot ω² r / f(r)
+```
 
-F_{1/2} = r_{1/2} j_{1/2} = 0
-F_{N+1/2} = r_{N+1/2} j_{N+1/2} = 0
+Gradients `ρ(r)`, `η(r)` come from parametric profiles (uniform, linear, power, two_step) sampled on the same radial grid.
 
-vbnet
-Copy code
+### Size distributions (parametric only)
+Size bins are generated procedurally (no CSVs): lognormal, bimodal lognormal, or discrete mixtures expanded over `nBins`. UI values are in nm; the solver uses SI (meters).
 
-(Equivalently, ghost cells may be used if they enforce `j=0` exactly.)
+### Stability (explicit)
+Global timestep constraint (applied over all bins `k` and cells `i`):
 
-### Positivity vs conservation
+```
+Δt_stable = safety · min( Δr²/(2 D_k[i]) , Δr/|v_k[i]| )
+```
 
-Do not “clamp negative values to zero” as a generic fix; that deletes mass and violates conservation. If negative values appear, prefer:
-- reducing `Δt` (via stability constraints below),
-- improving the flux scheme to be positivity-preserving,
-- rejecting the step and retrying with smaller `Δt`.
+Typical safety 0.2–0.4. The animation loop requests a target `ΔT`; the solver advances via repeated small steps up to that budget.
 
-If any fixup is applied, it must preserve `M` to within the test tolerances.
-
-## Stability guidance
-
-For explicit stepping, use a combined diffusion + advection constraint as guidance:
-
-Δt ≤ safety · min( Δr²/(2D), Δr/|v_max| )
-v_max ≈ |s ω²| r_max
-
-markdown
-Copy code
-
-Notes:
-- Increasing `D`, `ω`, or `s` typically requires smaller `Δt`.
-- Refining the grid (smaller `Δr`) also requires smaller `Δt`.
-- The helper `estimateStableDt` should implement this logic and be used by default.
-
-## Zero-flux steady state
-
-Setting `j = 0` yields the continuum steady profile:
-
-c(r) = C · exp[ (s ω² / (2D)) (r² - r_min²) ]
-
-perl
-Copy code
-
-With no-flux boundaries, the solver should approximately preserve this profile (up to discretization and time integration error). The steady-state test seeds the grid with this profile.
-
-## Verification checklist
-
-At minimum, the implementation should satisfy:
-- Mass conservation: `M(t)` stays within tolerance of `M(0)` for no-flux boundaries.
-- Non-negativity: `c(r,t)` stays ≥ `-ε` for small numerical tolerance.
-- Diffusion-only limit (`s=0`): Gaussian broadening trend in time.
-- Advection-only limit (`D=0`): conservative transport with no spurious mass gain/loss.
-- Zero-flux steady state: seeded steady profile remains close over many steps.
+### Steady/isopycnic behavior
+Where `Δρ` changes sign, an isopycnic radius exists; advection drives material toward that radius while diffusion broadens the band. Uniform-fluid and diffusion-only limits reduce to the classical Lamm behavior with conserved mass. No CSV inputs are used—only parametric gradients and distributions.
