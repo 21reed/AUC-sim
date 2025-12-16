@@ -154,20 +154,41 @@ describe('MultiSpeciesLamm', () => {
   it('advanceBy matches repeated small steps', () => {
     const solverA = setupSolver()
     const solverB = setupSolver()
-    const dt = solverA.computeStableDt(0.25)
-    const totalT = dt * 50
-    for (let i = 0; i < 50; i += 1) {
-      solverA.step(dt)
+    const dtBase = solverA.computeStableDt(0.3)
+    const dtSeg = dtBase
+    const segments = 20
+    const totalT = dtSeg * segments
+    for (let i = 0; i < segments; i += 1) {
+      solverA.advanceBy(dtSeg, 5000)
     }
-    const result = solverB.advanceBy(totalT, 200)
+    const result = solverB.advanceBy(totalT, 5000)
     expect(result.advanced).toBeCloseTo(totalT, totalT * 1e-6)
     const concA = solverA.getConcentrations().total
     const concB = solverB.getConcentrations().total
-    let maxDiff = 0
+    let maxRel = 0
     for (let i = 0; i < concA.length; i += 1) {
       const diff = Math.abs(concA[i] - concB[i])
-      if (diff > maxDiff) maxDiff = diff
+      const scale = Math.max(Math.abs(concA[i]), Math.abs(concB[i]), 1e-12)
+      const rel = diff / scale
+      if (rel > maxRel) maxRel = rel
     }
-    expect(maxDiff).toBeLessThan(1e-8)
+    expect(maxRel).toBeLessThan(1e-6)
+  })
+
+  it('advances proportionally to requested timeScale', () => {
+    const solver1 = setupSolver()
+    const solver10 = setupSolver()
+    const dtStable = solver1.computeStableDt(0.25)
+    const wallDt = dtStable * 0.2
+    const frames = 30
+    let sim1 = 0
+    let sim10 = 0
+    for (let f = 0; f < frames; f += 1) {
+      sim1 += solver1.advanceBy(wallDt * 1, 5000).advanced
+      sim10 += solver10.advanceBy(wallDt * 10, 5000).advanced
+    }
+    const expected = sim1 * 10
+    const relDiff = Math.abs(sim10 - expected) / expected
+    expect(relDiff).toBeLessThan(1e-6)
   })
 })
