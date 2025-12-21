@@ -129,6 +129,7 @@ export class MultiSpeciesLamm {
     }
   }
 
+  // Initializes using an arbitrary radial profile; mass per bin scales with weights.
   setInitialConcentrations(profile: (r: number) => number): void {
     for (let k = 0; k < this.q.length; k += 1) {
       const weight = this.weights[k]
@@ -136,6 +137,21 @@ export class MultiSpeciesLamm {
         const raw = profile(this.r[i]) * weight
         const c = Number.isFinite(raw) && raw > 0 ? raw : 0
         this.q[k][i] = this.r[i] * c
+      }
+    }
+  }
+
+  // Loads all size bins into the very top of the tube (first cell), preserving per-bin weights.
+  setInitialTopLoad(cells: number = 1): void {
+    const cellCount = Math.max(1, Math.min(cells, this.r.length))
+    for (let k = 0; k < this.q.length; k += 1) {
+      this.q[k].fill(0)
+      const massPerBin = this.weights[k] // mass proportional to weight
+      const share = massPerBin / cellCount
+      for (let i = 0; i < cellCount; i += 1) {
+        // q = r*c; to yield mass share*dr, set q = share/dr → c = (share/dr)/r
+        const cVal = share / (this.dr * this.r[i])
+        this.q[k][i] = this.r[i] * cVal
       }
     }
   }

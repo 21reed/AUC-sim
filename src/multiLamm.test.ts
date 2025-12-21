@@ -3,12 +3,6 @@ import { buildGradient } from './physics/gradient'
 import { MultiSpeciesLamm } from './physics/multiLamm'
 import { buildSizeDistribution } from './physics/sizeDistributions'
 
-function gaussianProfile(rMin: number, rMax: number): (r: number) => number {
-  const center = rMin + 0.2 * (rMax - rMin)
-  const sigma = 0.05 * (rMax - rMin)
-  return (r: number) => Math.exp(-((r - center) ** 2) / (2 * sigma * sigma))
-}
-
 function setupSolver() {
   const rMin = 0.05
   const rMax = 0.065
@@ -38,7 +32,7 @@ function setupSolver() {
     weights: dist.weights,
     material: { rhoCore: 2200, rhoShell: 1050, shellThickness_m: 2e-9 },
   })
-  solver.setInitialConcentrations(gaussianProfile(rMin, rMax))
+  solver.setInitialTopLoad()
   return solver
 }
 
