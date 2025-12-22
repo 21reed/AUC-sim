@@ -1,3 +1,5 @@
+// Solvent gradient profiles for ρ(r), η(r) on the solver grid.
+// Kept simple and parametric; see PHYSICS.md / DOCS.md.
 export type GradientType = 'uniform' | 'linear' | 'power' | 'two_step'
 
 export interface GradientParams {
@@ -27,6 +29,7 @@ function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x))
 }
 
+// Build ρ(r), η(r) on cell centers for a uniform radial grid.
 export function buildGradient(params: GradientParams, nRadial: number): GradientProfile {
   const rho = new Float64Array(nRadial)
   const eta = new Float64Array(nRadial)

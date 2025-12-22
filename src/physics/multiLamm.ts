@@ -1,5 +1,8 @@
 import type { GradientProfile } from './gradient'
 
+// Multi-size Lamm solver on a 1D radial grid.
+// Explicit FV with upwind advection; conserves mass per bin under no-flux BCs.
+// See PHYSICS.md / DOCS.md for equations and assumptions.
 const KB = 1.380649e-23
 const PI = Math.PI
 
@@ -26,6 +29,7 @@ export interface AdvanceResult {
   steps: number
 }
 
+// Core simulator state and time stepping.
 export class MultiSpeciesLamm {
   readonly r: Float64Array
   readonly rFaces: Float64Array

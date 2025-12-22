@@ -48,6 +48,26 @@ body {
   gap: 1rem;
 }
 
+.nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tab-button {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e9f1ff;
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #2b4c7a, #183458);
+  border-color: rgba(91, 209, 255, 0.5);
+}
+
 .eyebrow {
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -109,6 +129,87 @@ button:active {
 .info p {
   margin: 0.2rem 0 0;
   font-variant-numeric: tabular-nums;
+}
+
+.docs-view {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#simView {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#simView.hidden,
+.docs-view.hidden {
+  display: none;
+}
+
+.docs-card {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.docs-markdown {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.docs-markdown .katex-display {
+  margin: 0.75rem 0;
+}
+
+label .katex {
+  font-size: 0.95em;
+}
+
+.docs-markdown h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.docs-markdown h2 {
+  font-size: 1.3rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.docs-markdown h3 {
+  font-size: 1.1rem;
+  margin: 0.75rem 0 0.4rem;
+}
+
+.docs-markdown p {
+  margin: 0.4rem 0;
+}
+
+.docs-markdown ul,
+.docs-markdown ol {
+  margin: 0.4rem 0 0.4rem 1.2rem;
+}
+
+.docs-markdown li {
+  margin: 0.15rem 0;
+}
+
+.docs-markdown code {
+  font-family: monospace;
+  font-size: 0.85em;
+  padding: 0 0.15em;
+}
+
+.docs-markdown pre code {
+  display: block;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .info p#mass {

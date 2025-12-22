@@ -1,3 +1,4 @@
+// Default presets for UI bootstrap; aligns with DOCS.md examples.
 import type { GradientParams } from '../physics/gradient'
 import type { LognormalParams } from '../physics/sizeDistributions'
 import type { MaterialParams } from '../physics/multiLamm'
@@ -7,6 +8,7 @@ export interface RotorParams {
   temperature: number
 }
 
+// Initial app config (UI defaults + solver bootstrap).
 export interface DefaultConfig {
   radialCells: number
   gradient: GradientParams

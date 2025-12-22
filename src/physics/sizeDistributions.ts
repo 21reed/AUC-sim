@@ -1,3 +1,5 @@
+// Parametric size distributions in diameter space -> bin radii and weights.
+// See DOCS.md for supported types and intended usage.
 export type SizeDistributionType = 'lognormal' | 'bimodal_lognormal' | 'discrete'
 
 export interface LognormalParams {
@@ -160,6 +162,7 @@ function buildDiscrete(params: DiscreteParams, nBins: number): {
   return { diameters_nm, weights }
 }
 
+// Build bin radii (m) and normalized weights from a parametric distribution.
 export function buildSizeDistribution(
   params: SizeDistributionParams,
   options: { nBins: number },

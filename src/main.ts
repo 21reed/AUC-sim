@@ -1,15 +1,30 @@
 import './style.css'
+import { marked } from 'marked'
+import katex from 'katex'
+import katexExtension from 'marked-katex-extension'
+import 'katex/dist/katex.min.css'
+import docsMarkdown from '../DOCS.md?raw'
 import { buildGradient, type GradientParams, type GradientType } from './physics/gradient'
 import { MultiSpeciesLamm } from './physics/multiLamm'
 import { buildSizeDistribution, type SizeDistributionParams } from './physics/sizeDistributions'
 import { defaultConfig } from './config/defaults'
 
+// Main UI wiring for the AUC/DGU simulator.
+// Handles controls, docs view, plotting, and the animation loop.
+// Modeling details live in PHYSICS.md and DOCS.md.
 type TimeScale = 1 | 10 | 100 | 1000 | 10000
+
+marked.use(
+  katexExtension({
+    throwOnError: false,
+  }),
+)
 
 const app = document.querySelector<HTMLDivElement>('#app')
 if (!app) {
   throw new Error('Missing #app container')
 }
+
 
 function must<T>(value: T | null, label: string): T {
   if (value === null) {
@@ -17,6 +32,51 @@ function must<T>(value: T | null, label: string): T {
   }
   return value
 }
+
+function setMathLabel(el: HTMLElement, tex: string): void {
+  el.innerHTML = ''
+  katex.render(tex, el, {
+    displayMode: false,
+    throwOnError: false,
+  })
+}
+
+function setMathLabelWithText(el: HTMLElement, tex: string, trailing: string): void {
+  el.innerHTML = ''
+  const span = document.createElement('span')
+  katex.render(tex, span, {
+    displayMode: false,
+    throwOnError: false,
+  })
+  el.appendChild(span)
+  if (trailing) {
+    el.appendChild(document.createTextNode(trailing))
+  }
+}
+
+function setMathLabelForInputs(inputId: string, tex: string, trailing: string): void {
+  const inputs = document.querySelectorAll<HTMLInputElement>(`#${inputId}`)
+  inputs.forEach((input) => {
+    const label = input.closest('label')
+    if (!label) {
+      return
+    }
+    for (const node of Array.from(label.childNodes)) {
+      if (node !== input) {
+        label.removeChild(node)
+      }
+    }
+    const span = document.createElement('span')
+    if (trailing) {
+      setMathLabelWithText(span, tex, trailing)
+    } else {
+      setMathLabel(span, tex)
+    }
+    label.insertBefore(span, input)
+  })
+}
+
+const shellThicknessNm = (defaultConfig.material.shellThickness_m * 1e9).toFixed(2)
 
 app.innerHTML = `
   <main class="panel">
@@ -30,16 +90,21 @@ app.innerHTML = `
         <button id="toggle">Pause</button>
         <label class="small-label">Time scale
           <select id="timescale">
-            <option value="1">1×</option>
-            <option value="10">10×</option>
-            <option value="100">100×</option>
+            <option value="1">1x</option>
+            <option value="10">10x</option>
+            <option value="100">100x</option>
             <option value="1000">1k×</option>
             <option value="10000">10k×</option>
           </select>
         </label>
       </div>
     </header>
+    <div class="nav-tabs">
+      <button id="tabSim" class="tab-button active" type="button">Simulation</button>
+      <button id="tabDocs" class="tab-button" type="button">Documentation</button>
+    </div>
 
+    <section id="simView">
     <section class="info">
       <div>
         <p class="label">Domain (m)</p>
@@ -54,7 +119,7 @@ app.innerHTML = `
         <p id="speed">1×</p>
       </div>
       <div>
-        <p class="label">Δt stable (s)</p>
+        <p class="label">Δ $\delta$ t stable (s)</p>
         <p id="dt">—</p>
       </div>
       <div>
@@ -186,7 +251,7 @@ app.innerHTML = `
         <div class="grid">
           <label>ρ_core (kg/m³)<input id="rho_core" type="number" step="10" value="${defaultConfig.material.rhoCore}"></label>
           <label>ρ_shell (kg/m³)<input id="rho_shell" type="number" step="10" value="${defaultConfig.material.rhoShell}"></label>
-          <label>t_shell (nm)<input id="t_shell" type="number" step="0.01" value="${defaultConfig.material.shellThickness_m * 1e9}"></label>
+          <label>t_shell (nm)<input id="t_shell" type="number" step="0.01" value="${shellThicknessNm}"></label>
           <label>ω (rad/s)<input id="omega" type="number" step="10" value="${defaultConfig.rotor.omega}"></label>
           <label>T (K)<input id="temp" type="number" step="0.1" value="${defaultConfig.rotor.temperature}"></label>
         </div>
@@ -207,11 +272,37 @@ app.innerHTML = `
       </div>
       <div id="plotLegend" class="plot-legend" aria-label="Plot legend"></div>
     </div>
+    </section>
+    <section id="docsView" class="docs-view hidden"></section>
   </main>
 `
 
+setMathLabelForInputs('rmin', 'r_{\\min}\\,(\\mathrm{m})', '')
+setMathLabelForInputs('rmax', 'r_{\\max}\\,(\\mathrm{m})', '')
+setMathLabelForInputs('rmid', 'r_{\\text{mid}}\\,(\\mathrm{m})', '')
+setMathLabelForInputs('rhotop', '\\rho_{\\text{top}}\\,(\\mathrm{kg\\,m^{-3}})', '')
+setMathLabelForInputs('rhobot', '\\rho_{\\text{bot}}\\,(\\mathrm{kg\\,m^{-3}})', '')
+setMathLabelForInputs('rhomid', '\\rho_{\\text{mid}}\\,(\\mathrm{kg\\,m^{-3}})', '')
+setMathLabelForInputs('etatop', '\\eta_{\\text{top}}\\,(\\mathrm{Pa\\,s})', '')
+setMathLabelForInputs('etabot', '\\eta_{\\text{bot}}\\,(\\mathrm{Pa\\,s})', '')
+setMathLabelForInputs('etamid', '\\eta_{\\text{mid}}\\,(\\mathrm{Pa\\,s})', '')
+setMathLabelForInputs('expo', 'p\\,(\\mathrm{unitless})', '')
+setMathLabelForInputs('d50', 'D_{50}\\,(\\mathrm{nm})', '')
+setMathLabelForInputs('d50_2', 'D_{50,2}\\,(\\mathrm{nm})', '')
+setMathLabelForInputs('gsigma', 'g_{\\sigma}', '')
+setMathLabelForInputs('gsigma2', 'g_{\\sigma,2}', '')
+setMathLabelForInputs('rho_core', '\\rho_{\\text{core}}\\,(\\mathrm{kg\\,m^{-3}})', '')
+setMathLabelForInputs('rho_shell', '\\rho_{\\text{shell,eff}}\\,(\\mathrm{kg\\,m^{-3}})', '')
+setMathLabelForInputs('t_shell', 't_{\\text{shell}}\\,(\\mathrm{nm})', '')
+setMathLabelForInputs('omega', '\\omega\\,(\\mathrm{rad\\,s^{-1}})', '')
+setMathLabelForInputs('temp', 'T\\,(\\mathrm{K})', '')
+
 const canvas = must(document.querySelector<HTMLCanvasElement>('#profile'), 'profile canvas')
 const plotLegend = must(document.querySelector<HTMLDivElement>('#plotLegend'), 'plot legend')
+const simView = must(document.querySelector<HTMLElement>('#simView'), 'sim view')
+const docsView = must(document.querySelector<HTMLElement>('#docsView'), 'docs view')
+const tabSim = must(document.querySelector<HTMLButtonElement>('#tabSim'), 'tabSim')
+const tabDocs = must(document.querySelector<HTMLButtonElement>('#tabDocs'), 'tabDocs')
 const toggle = must(document.querySelector<HTMLButtonElement>('#toggle'), 'toggle')
 const applyBtn = must(document.querySelector<HTMLButtonElement>('#apply'), 'apply button')
 const timeEl = must(document.querySelector<HTMLParagraphElement>('#time'), 'time readout')
@@ -262,6 +353,12 @@ const distGroups = {
   discrete: must(document.querySelector<HTMLDivElement>('.dist-discrete'), 'dist-discrete'),
 }
 
+docsView.innerHTML = `
+  <div class="docs-card">
+    <div class="docs-markdown">${marked.parse(docsMarkdown)}</div>
+  </div>
+`
+
 function readNumber(id: string, fallback: number): number {
   const el = document.querySelector<HTMLInputElement>(`#${id}`)
   if (!el) return fallback
@@ -272,6 +369,14 @@ function readNumber(id: string, fallback: number): number {
 function readSelect<T extends string>(id: string, fallback: T): T {
   const el = document.querySelector<HTMLSelectElement>(`#${id}`)
   return (el?.value as T) ?? fallback
+}
+
+function setView(next: 'sim' | 'docs'): void {
+  currentView = next
+  simView.classList.toggle('hidden', currentView !== 'sim')
+  docsView.classList.toggle('hidden', currentView !== 'docs')
+  tabSim.classList.toggle('active', currentView === 'sim')
+  tabDocs.classList.toggle('active', currentView === 'docs')
 }
 
 function setHidden(el: HTMLElement, hidden: boolean): void {
@@ -347,6 +452,7 @@ let timeScale: TimeScale = defaultConfig.timeScale
 let showPellet = false
 let showMassInspector = false
 let selectedBinIndex: number | null = null
+let currentView: 'sim' | 'docs' = 'sim'
 
 function buildSolver(): void {
   const gradParams = buildGradientParams()
@@ -389,7 +495,6 @@ timescaleSel.addEventListener('change', () => {
   timeScale = Number(timescaleSel.value) as TimeScale
 })
 
-// set initial dropdown to default time scale
 timescaleSel.value = `${defaultConfig.timeScale}`
 
 applyBtn.addEventListener('click', () => {
@@ -398,6 +503,14 @@ applyBtn.addEventListener('click', () => {
 
 showPelletToggle.addEventListener('change', () => {
   showPellet = showPelletToggle.checked
+})
+
+tabSim.addEventListener('click', () => {
+  setView('sim')
+})
+
+tabDocs.addEventListener('click', () => {
+  setView('docs')
 })
 
 massEl.addEventListener('click', () => {
@@ -429,6 +542,8 @@ distTypeSelect.addEventListener('change', () => {
   const next = readSelect<'lognormal' | 'bimodal_lognormal' | 'discrete'>('disttype', 'lognormal')
   updateDistributionGroups(next)
 })
+
+setView('sim')
 
 const ctx = must(canvas.getContext('2d'), '2d context')
 const colors = ['#6bd0ff', '#ff9f6b', '#9c7bff', '#5de6a9', '#f25f87', '#b6ff6b']
@@ -556,7 +671,7 @@ function formatMass(value: number): string {
   return `${value.toExponential(3)} arb`
 }
 
-// Pellet mass is taken as the mass contained in the outermost radial cell (display only; simulation unchanged).
+// Pellet mass = outermost cell mass (display only; simulation unchanged).
 function computePelletMass(solver: MultiSpeciesLamm): number {
   let pellet = 0
   const lastIndex = solver.r.length - 1
