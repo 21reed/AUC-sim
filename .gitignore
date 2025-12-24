@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Internal / helper docs you don't want on GitHub
+AGENTS.md
