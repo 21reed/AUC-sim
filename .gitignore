@@ -23,5 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 
-# Internal / helper docs you don't want on GitHub
+# Internal / helper docs we don't want on GitHub
 AGENTS.md

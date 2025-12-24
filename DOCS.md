@@ -37,7 +37,7 @@ High-level, AUC-sim:
   - effective shell density $\rho_{\mathrm{shell,eff}}$
   - shell thickness $t_\mathrm{shell}$
   - local solvent viscosity $\eta(r)$
-- uses realistic rotor geometry presets (for example, SW 41 Ti by default) with:
+- uses realistic rotor geometry presets (for example, SW 41 Ti settings by default) with:
   - $r_{min}$, $r_{max}$ and number of radial cells $N$
   - rotor speed $\omega$ (rad/s) or rpm
   - temperature $T$ (K)
