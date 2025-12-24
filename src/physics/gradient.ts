@@ -1,5 +1,5 @@
 // Solvent gradient profiles for ρ(r), η(r) on the solver grid.
-// Kept simple and parametric; see PHYSICS.md / DOCS.md.
+// see PHYSICS.md / DOCS.md.
 export type GradientType = 'uniform' | 'linear' | 'power' | 'two_step'
 
 export interface GradientParams {

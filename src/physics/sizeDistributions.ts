@@ -162,7 +162,7 @@ function buildDiscrete(params: DiscreteParams, nBins: number): {
   return { diameters_nm, weights }
 }
 
-// Build bin radii (m) and normalized weights from a parametric distribution.
+// Build bin radii (m) + normalized weights from a parametric distribution.
 export function buildSizeDistribution(
   params: SizeDistributionParams,
   options: { nBins: number },

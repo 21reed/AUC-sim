@@ -119,7 +119,7 @@ app.innerHTML = `
         <p id="speed">1×</p>
       </div>
       <div>
-        <p class="label">Δ $\delta$ t stable (s)</p>
+        <p class="label">Δt stable (s)</p>
         <p id="dt">—</p>
       </div>
       <div>
