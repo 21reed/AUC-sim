@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use AUC-sim, please cite it as below."
+title: "AUC-sim"
+type: software
+authors:
+  - family-names: "Petersen"
+    given-names: "Reed"
+    orcid: "https://orcid.org/0009-0000-3616-5630"
+version: "0.1.0"
+date-released: "2026-03-13"
+doi: "10.5281/zenodo.19009942"
+url: "https://21reed.github.io/AUC-sim/"
+repository-code: "https://github.com/21reed/AUC-sim"
+abstract: "Interactive Lamm-equation simulator for density-gradient ultracentrifugation of nanoparticles."
+license: "MIT"
